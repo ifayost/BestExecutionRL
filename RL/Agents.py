@@ -5,6 +5,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 
 # ONE-STEP, TABULAR, MODEL-FREE, TD METHODS
@@ -71,6 +72,10 @@ class QLearning:
         self.double = double
         self.verbose = verbose
         self.save = save
+        if save:
+            directory = os.path.dirname(save)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
 
     def epsilon_greedy(self, state):
         """
@@ -464,8 +469,11 @@ class DQN:
         self.Transition = namedtuple('Transition', ('state', 'action',
                                                     'next_state', 'reward'))
         self.loss = loss
-        self.steps_done = 0
         self.save = save
+        if save:
+            directory = os.path.dirname(save)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
 
     class DQNetwork(nn.Module):
         def __init__(self, state_dims, n_actions):
@@ -526,8 +534,6 @@ class DQN:
 
         memory = self.ReplayMemory(self.capacity)
 
-        self.steps_done = 0
-
         def optimize_model():
             if len(memory) < batch_size:
                 return
@@ -574,16 +580,13 @@ class DQN:
             self.optimizer.step()
 
         if self.save:
-            stats = {'checkpoints': [], 'rewards': []}
+            stats = {'checkpoints': [], 'rewards': [], 'epsilon': []}
         else:
-            stats = {'rewards': []}
+            stats = {'rewards': [], 'epsilon': []}
 
         max_returns = -9999999999999999
 
         for i_episode in range(episodes):
-
-            if self.adaptive is not None:
-                self.adaptive(self, i_episode)
 
             returns = 0
             state = env.reset()
@@ -606,6 +609,10 @@ class DQN:
                 optimize_model()
                 if done:
                     break
+
+            stats['epsilon'].append(self.epsilon)
+            if self.adaptive is not None:
+                self.adaptive(self, i_episode)
             stats['rewards'].append(returns.item())
 
             if i_episode % target_update == 0:
@@ -642,67 +649,26 @@ class TWAP:
         self.actions = []
 
     def train(self, env):
-        self.H = env.H - env.time_step
-        self.V = env.V
-        self.ratio = self.V/self.H.delta
-        self.time_step = env.time_step.delta
-        self.actions = env.posible_actions
+        ratio = env.V/env.H.delta
+        self.action = ratio * env.time_step.delta
+        return env
 
     def predict(self, state):
-        volume = self.ratio * self.time_step
-        action = np.where(self.actions >= volume)[0]
-        if action.size == 0:
-            action = len(self.actions) - 1
-        else:
-            action = action[0]
-        return action
-
-
-class dynamicTWAP:
-    def __init__(self):
-        self.H = 0
-        self.V = 0
-        self.ratio = 0
-        self.index = []
-        self.actions = []
-
-    def train(self, env):
-        self.H = env.H - env.time_step
-        self.V = env.V
-        self.time_step = env.time_step
-        self.actions = env.posible_actions
-
-    def predict(self, state):
-        self.ratio = self.V/self.H.delta
-        volume = self.ratio * self.time_step.delta
-        action = np.where(self.actions >= volume)[0]
-        if action.size == 0:
-            action = len(self.actions) - 1
-        else:
-            action = action[0]
-        self.V -= self.actions[action]
-        self.H -= self.time_step
-        return action
+        return self.action
 
 
 class POV:
     def __init__(self, percent):
         self.percent = percent
-        self.actions = []
 
     def train(self, env):
-        self.actions = env.posible_actions
+        self.volMeanCol = env.volMeanCol
         self.orderbook = env.orderbook
-        self.SizeCols = env.SizeCols
         self.istep = env.istep
+        return env
 
     def predict(self, state):
-        state = self.orderbook[self.SizeCols[0]][self.istep]
-        volume = np.sum(state) * self.percent
-        action = np.where(self.actions >= volume)[0]
-        if action.size == 0:
-            action = len(self.actions) - 1
-        else:
-            action = action[0]
+        volume = self.orderbook[self.volMeanCol][self.istep]
+        action = volume * self.percent
         self.istep += 1
         return action

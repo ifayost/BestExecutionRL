@@ -1,48 +1,42 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
+import os
 import pickle
-from tqdm import tqdm
-from collections import Counter
 import json
+from collections import Counter
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
-def plot_state(env):
-    history = [env.reset()]
-    done = False
-    while not done:
-        state, reward, done, info = env.step(0)
-        history.append(state)
-    history = np.array(history)
-    prices = env.orderbook[env.PriceCols[0]][:len(env.history)]
-    fig, ax = plt.subplots(4, 1, sharex=True, figsize=(20, 10), dpi=200)
-    ax[0].plot(range(len(env.history)), prices, label='Price')
-    ax[0].plot([0, len(env.history)], [env.avg, env.avg], linestyle='dashed',
-               label='Epissode price average')
-    ax[0].set_ylabel('Price')
-    ax[0].legend()
-    ax[0].grid(True)
-    ax[1].plot(range(len(history)), history[:, 2], label='Standardized price')
-    ax[1].plot(range(len(history)), history[:, 3], label='Standardized fma')
-    ax[1].plot(range(len(history)), history[:, 4], label='Standardized sma')
-    ax[1].legend()
-    ax[1].grid(True)
-    ax[2].plot(range(len(history)), history[:, 6], label='MACD')
-    ax[2].plot(range(len(history)), history[:, 7], label='MACD signal')
-    ax[2].bar(range(len(history)), history[:, 8], color='gold',
-              label='MACD divergence')
-    ax[2].legend()
-    ax[2].grid(True)
-
-    ax[3].plot(range(len(history)), history[:, 9], label='RSI')
-    ax[3].legend()
-    ax[3].grid(True)
-    ax[3].set_ylabel('RSI')
-    ax[3].set_xlabel('Step')
-    plt.subplots_adjust(hspace=0.05)
+def read_df(path, test=None):
+    files = [i for i in os.listdir(path)]
+    files.remove('.DS_Store')
+    dfs = {int(i.split('_')[-1][:-4]): pd.read_csv(os.path.join(path, i))
+           for i in files}
+    n_orders = {i: len(j) for i, j in dfs.items()}
+    dfsc = dfs.copy()
+    for i in dfsc.keys():
+        if n_orders[i] == 0:
+            del dfs[i]
+    keys = sorted(list(dfs.keys()))
+    if test is not None:
+        train = {k: dfs[k] for k in keys[:-test]}
+    else:
+        train = {k: dfs[k] for k in keys}
+    train = pd.concat(train.values(), ignore_index=True, sort='time')\
+        .drop('FECHA', axis=1)
+    train.time = pd.to_datetime(train.time)
+    if test is not None:
+        test = {k: dfs[k] for k in keys[-test:]}
+        test = pd.concat(test.values(), ignore_index=True, sort='time')\
+            .drop('FECHA', axis=1)
+        test.time = pd.to_datetime(test.time)
+        return train, test
+    return train
 
 
-def test_episode_agent(env, agent, name=None, random_seed=None, POV=False):
+def test_episode_agent(env, agent, name=None, random_seed=None,
+                       episode_retrain=False):
     np.random.seed(random_seed)
     state = env.reset()
 
@@ -51,7 +45,7 @@ def test_episode_agent(env, agent, name=None, random_seed=None, POV=False):
     time = []
     rewards = []
     done = False
-    if POV:
+    if episode_retrain:
         agent.train(env)
     while not done:
         action = agent.predict(state)
@@ -63,14 +57,13 @@ def test_episode_agent(env, agent, name=None, random_seed=None, POV=False):
     hist = np.array(hist)
 
     n_steps = len(time)
+    prices = np.array(env.orderbook[env.priceCol])
 
+    # plt.rcParams['font.size'] = 18
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True,
                                              figsize=(20, 10), dpi=200)
-    for i in range(1):
-        ax1.plot(time, env.orderbook['PRE_VENTA1'][:n_steps], c='green',
-                 label='Price')
-        # ax1.plot(time, env.orderbook['PRE_COMPRA1'][:n_steps], c='red')
-    ax1.plot(time, [env.avg] * len(time), linestyle='dashed', c='#b58900',
+    ax1.plot(time, prices[:n_steps], label='Price')
+    ax1.plot(time, [env.price_mean] * len(time), linestyle='dashed',
              label='Episode price average')
     ax1.set_title('Orderbook')
     ax1.legend()
@@ -102,13 +95,18 @@ def test_agent(env, agent, n_episodes, save=None,
                random_seed=None, episode_retrain=False):
     np.random.seed(random_seed)
 
+    if save:
+        directory = os.path.dirname(save)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
     rewards = {}
     actions = []
     remaining_inventory = []
-    cost = {}
+    prices = {}
     for episode in tqdm(range(n_episodes)):
         rewards[episode] = []
-        cost[episode] = []
+        prices[episode] = []
         state = env.reset()
         done = False
         if episode_retrain:
@@ -116,19 +114,18 @@ def test_agent(env, agent, n_episodes, save=None,
         while not done:
             action = agent.predict(state)
             actions.append(action)
-            price = env.orderbook[env.PriceCols[0]][env.istep]
+            prices[episode].append(env.orderbook[env.priceCol][env.istep])
             state, reward, done, info = env.step(action)
             rewards[episode].append(reward)
-            cost[episode].append(env.posible_actions[action] * price)
         if env.t <= pd.to_timedelta(0, unit='s'):
             remaining_inventory.append(action / env.V)
 
     if save is not None:
         with open(save + '.pickle', 'wb') as file:
-            pickle.dump([rewards, actions, remaining_inventory, cost],
+            pickle.dump([rewards, actions, remaining_inventory, prices],
                         file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return rewards, actions, remaining_inventory, cost
+    return rewards, actions, remaining_inventory, prices
 
 
 def open_test(path):
@@ -143,27 +140,21 @@ def round_value_error(x, e):
     return x, e
 
 
-def plot_test(path, episodes):
-    posible_actions = np.array([0, 10, 100, 1_000, 10_000, 100_000])
-    rewards, actions, remaining_inventory, cost = \
-        open_test(path)
+def plot_test(env, test_path, episodes):
+    rewards, actions, remaining_inventory, _ = \
+        open_test(test_path)
     cumulative_rewards = [sum(i) for i in rewards.values()]
-    episode_cost = [sum(i) for i in cost.values()]
     total_episodes = len(rewards.keys())
-
     with open(episodes + '/info.txt', 'r') as file:
         info = json.load(file)
 
-    inventory = int(info['volume'])
     time_step = pd.to_timedelta(info['time_step'])
     n_steps_per_episode = [len(i) for i in rewards.values()]
 
-    figures = 4
+    figures = 3
     figure_remaining_inventory = (any(np.array(remaining_inventory)) != 0)
     figures += figure_remaining_inventory
-    # figure_steps = (len(np.unique(n_steps_per_episode)) > 1)
     fig, ax = plt.subplots(1, figures)
-
     hist = ax[0].hist(cumulative_rewards, bins=20)
     mean = np.mean(cumulative_rewards)
     std = np.std(cumulative_rewards)
@@ -174,45 +165,32 @@ def plot_test(path, episodes):
     ax[0].set_xlabel('Reward')
     ax[0].legend()
 
-    x = np.array(episode_cost)/inventory
-    hist = ax[1].hist(x, bins=20)
-    mean = np.mean(x)
-    std = np.std(x)
-    m, s = round_value_error(mean, std)
-    ax[1].plot([mean, mean], [0, max(hist[0])*1.05], linewidth=3, c='#859900',
-               label=f'Mean: {m} ± {s}')
-    ax[1].set_title('Average cost per share')
-    ax[1].set_xlabel('Price')
-    ax[1].legend()
+    if len(np.unique(actions)) > 10:
+        ax[1].hist(actions, bins=20)
+    else:
+        c_actions = Counter(actions)
+        keys = list(c_actions.keys())
+        ax[1].bar(keys, c_actions.values())
+    ax[1].set_title('Actions')
+    ax[1].set_xlabel('Volume')
 
-    c_actions = Counter(actions)
-    x = range(len(posible_actions))
-    y = np.zeros(len(posible_actions))
-    for i, j in c_actions.items():
-        y[i] = j/sum(c_actions.values())
-    ax[2].bar(x, y)
-    ax[2].set_xticks(np.arange(len(x)))
-    ax[2].set_xticklabels(posible_actions, rotation=45)
-    ax[2].set_title('Actions')
-    ax[2].set_xlabel('Volume')
-
-    hist = ax[3].hist(n_steps_per_episode, bins=20)
-    xticks = ax[3].get_xticks()
-    ax[3].set_xticklabels(pd.to_timedelta(xticks * time_step, unit='s')
+    hist = ax[2].hist(n_steps_per_episode, bins=20)
+    xticks = ax[2].get_xticks()
+    ax[2].set_xticklabels(pd.to_timedelta(xticks * time_step, unit='s')
                             .map(lambda x: str(x)[7:]), rotation=45)
     mean = np.mean(n_steps_per_episode)
     std = np.std(n_steps_per_episode)
     m = str(pd.to_timedelta(mean * time_step, unit='s'))[7:]
     s = str(pd.to_timedelta(std * time_step, unit='s'))[7:]
-    ax[3].plot([mean, mean], [0, max(hist[0])*1.05], linewidth=3,
+    ax[2].plot([mean, mean], [0, max(hist[0])*1.05], linewidth=3,
                c='#859900', label=f'Mean: {m} ± {s}')
-    ax[3].set_title('Time to finish the episode')
-    ax[3].set_xlabel('Time (H:M:S)')
-    ax[3].legend()
+    ax[2].set_title('Time to finish the episode')
+    ax[2].set_xlabel('Time (H:M:S)')
+    ax[2].legend()
 
     if figure_remaining_inventory:
         x = np.array(remaining_inventory)*100
-        hist = ax[4].hist(x)
+        hist = ax[3].hist(x)
         mean = np.mean(x)
         std = np.std(x)
         if std != 0:
@@ -220,10 +198,41 @@ def plot_test(path, episodes):
         else:
             m, _ = round_value_error(mean, mean)
             s = std
-        ax[4].plot([mean, mean], [0, max(hist[0])*1.05], linewidth=3,
+        ax[3].plot([mean, mean], [0, max(hist[0])*1.05], linewidth=3,
                    c='#859900', label=f'Mean: {m:0.2e} ± {s:0.2e}')
-        ax[4].set_title('Remaining inventory')
-        ax[4].set_xlabel('Remaining inventory (%)')
-        ax[4].legend()
+        ax[3].set_title('Remaining inventory')
+        ax[3].set_xlabel('Remaining inventory (%)')
+        ax[3].legend()
 
     fig.suptitle(f'Tested on {total_episodes} episodes')
+
+
+def plot_train_stats(stats, save=None, rolling=None):
+    checks = np.array(stats['checkpoints']).astype(int)
+    rewards = np.array(stats['rewards'])
+    epsilons = np.array(stats['epsilon'])
+    if rolling is None:
+        rolling = int(len(rewards)/100)
+    smooth = pd.DataFrame(rewards).rolling(rolling).mean()
+    plt.rcParams['figure.figsize'] = (20, 10)
+    plt.rcParams['font.size'] = 22
+    fig, ax1 = plt.subplots()
+    ax1.plot(range(len(rewards)), rewards, alpha=0.5)
+    ax1.plot(range(len(smooth)), smooth)
+    ax1.scatter(checks, smooth.iloc[checks], c='#dc322f', marker='.')
+    inf, sup = np.quantile(rewards, [0.05, 0.95])
+    ax1.set_ylim(inf, sup)
+    ax1.set_ylabel('Reward')
+    ax1.set_xlabel('Episode')
+    ax1.grid(True)
+
+    ax2 = ax1.twinx()
+    color = "#d33682"
+    ax2.set_ylabel('Epsilon', color=color)
+    ax2.plot(range(len(epsilons)), epsilons, color=color)
+    ax2.fill_between(range(len(epsilons)), epsilons,
+                     interpolate=True, color=color, alpha=0.15)
+    ax2.tick_params(axis='y', labelcolor=color)
+    if save is not None:
+        plt.savefig(save[:-2]+'png', dpi=200)
+    plt.show()
