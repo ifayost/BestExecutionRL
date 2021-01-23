@@ -208,19 +208,19 @@ def plot_test(env, test_path, episodes):
 
 
 def plot_train_stats(stats, save=None, rolling=None):
-    checks = np.array(stats['checkpoints']).astype(int)
+    checks = np.array(stats['checkpoints'])
     rewards = np.array(stats['rewards'])
     epsilons = np.array(stats['epsilon'])
     if rolling is None:
         rolling = int(len(rewards)/100)
-    smooth = pd.DataFrame(rewards).rolling(rolling).mean()
+    smooth = pd.DataFrame(rewards[:, 1]).rolling(rolling).mean()
     plt.rcParams['figure.figsize'] = (20, 10)
     plt.rcParams['font.size'] = 22
     fig, ax1 = plt.subplots()
-    ax1.plot(range(len(rewards)), rewards, alpha=0.5)
-    ax1.plot(range(len(smooth)), smooth)
-    ax1.scatter(checks, smooth.iloc[checks], c='#dc322f', marker='.')
-    inf, sup = np.quantile(rewards, [0.05, 0.95])
+    ax1.plot(rewards[:, 0], rewards[:, 1], alpha=0.5)
+    ax1.plot(rewards[:, 0], smooth)
+    ax1.scatter(checks[:, 0], checks[:, 1], c='#dc322f', marker='.')
+    inf, sup = np.quantile(rewards[:, 1], [0.05, 0.95])
     ax1.set_ylim(inf, sup)
     ax1.set_ylabel('Reward')
     ax1.set_xlabel('Episode')
@@ -229,10 +229,10 @@ def plot_train_stats(stats, save=None, rolling=None):
     ax2 = ax1.twinx()
     color = "#d33682"
     ax2.set_ylabel('Epsilon', color=color)
-    ax2.plot(range(len(epsilons)), epsilons, color=color)
-    ax2.fill_between(range(len(epsilons)), epsilons,
+    ax2.plot(epsilons[:, 0], epsilons[:, 1], color=color)
+    ax2.fill_between(epsilons[:, 0], epsilons[:, 1],
                      interpolate=True, color=color, alpha=0.15)
     ax2.tick_params(axis='y', labelcolor=color)
     if save is not None:
-        plt.savefig(save[:-2]+'png', dpi=200)
+        plt.savefig(save+'.png', dpi=200)
     plt.show()

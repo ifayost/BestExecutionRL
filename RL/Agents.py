@@ -1,5 +1,5 @@
 import numpy as np
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, deque
 import itertools
 import random
 import torch
@@ -438,7 +438,8 @@ class DQN:
     def __init__(self, env, alpha, gamma, epsilon, capacity=10000, policy=None,
                  adaptive=None, double=False, qnetwork=None,
                  loss=F.smooth_l1_loss, optimizer=None,
-                 verbose=True, save=None):
+                 verbose=True, save=None,
+                 rewards_mean=40, n_episodes_to_save=100):
         self.device = torch.device("cuda" if torch.cuda.is_available()
                                    else "cpu")
         self.alpha = alpha
@@ -465,11 +466,14 @@ class DQN:
         else:
             self.optimizer = optimizer
         self.policy = policy if policy is not None else self.epsilon_greedy
+        self.rewards_mean = rewards_mean
+        self.n_episodes_to_save = n_episodes_to_save
         self.verbose = verbose
         self.Transition = namedtuple('Transition', ('state', 'action',
                                                     'next_state', 'reward'))
         self.loss = loss
         self.save = save
+        self.returns_deque = deque(maxlen=rewards_mean)
         if save:
             directory = os.path.dirname(save)
             if not os.path.exists(directory):
@@ -610,10 +614,12 @@ class DQN:
                 if done:
                     break
 
-            stats['epsilon'].append(self.epsilon)
-            if self.adaptive is not None:
-                self.adaptive(self, i_episode)
-            stats['rewards'].append(returns.item())
+            if i_episode % self.n_episodes_to_save == 0:
+                stats['epsilon'].append((i_episode, self.epsilon))
+                if self.adaptive is not None:
+                    self.adaptive(self, i_episode)
+                stats['rewards'].append((i_episode, returns.item()))
+            self.returns_deque.append(returns.item())
 
             if i_episode % target_update == 0:
                 self.target_net.load_state_dict(self.Q_net.state_dict())
@@ -622,14 +628,14 @@ class DQN:
                 print("Episode:", i_episode, "Returns:", f'{returns.item():,}')
 
             if self.save is not None:
-                if len(stats['rewards']) >= 40:
-                    mean_returns = np.mean(stats['rewards'][-40:])
+                if i_episode >= self.rewards_mean:
+                    mean_returns = np.mean(self.returns_deque)
                     if mean_returns >= max_returns:
                         max_returns = mean_returns
                         torch.save(self.Q_net.state_dict(), self.save)
                         print("Saved state at episode:", i_episode,
                               "with mean returns:", f'{mean_returns:,}')
-                        stats['checkpoints'].append(i_episode)
+                        stats['checkpoints'].append((i_episode, returns.item()))
         return stats
 
     def predict(self, state):

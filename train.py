@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+import pickle
 from RL.Environment import MarketGym
 from RL.Rewards import vwap_reward
 from RL.Agents import DQN
 from RL.Utils import plot_train_stats
 
-plt.style.use("solarized_dark")
+plt.style.use('./solarized_dark.mplstyle')
 
 PATH = "./episodes"
 
@@ -18,7 +19,7 @@ alpha = 1e-2  # 5e-4
 gamma = 0.999
 epsilon = 0.9
 
-episodes = 10
+episodes = 50
 batch_size = 64
 target_update = 4
 
@@ -30,8 +31,10 @@ def adaptive(self, episode):
 
 
 agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
-            double=True, save=weights)
+            double=True, save=weights, n_episodes_to_save=10)
 
 stats = agent.train(env, episodes, batch_size, target_update)
+with open('./figures/DDQN.pkl', 'wb') as f:
+    pickle.dump(stats, f)
 
-plot_train_stats(stats, save='./figura', rolling=2)
+plot_train_stats(stats, save='./figures/DDQN', rolling=2)

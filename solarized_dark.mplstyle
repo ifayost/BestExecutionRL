@@ -1,0 +1,34 @@
+# Solarized dark theme for matplotlib.
+
+#COLOR = {"base03":  "#002B36",
+#         "base02":  "#073642",
+#         "base01":  "#586e75",
+#         "base00":  "#657b83",
+#         "base0":   "#839496",
+#         "base1":   "#93a1a1",
+#         "base2":   "#EEE8D5",
+#         "base3":   "#FDF6E3",
+#         "yellow":  "#B58900",
+#         "orange":  "#CB4B16",
+#         "red":     "#DC322F",
+#         "magenta": "#D33682",
+#         "violet":  "#6C71C4",
+#         "blue":    "#268BD2",
+#         "cyan":    "#2AA198",
+#         "green":   "#859900"
+#         }
+
+ytick.color: 839496  # 'k'
+xtick.color: 839496  # 'k'
+text.color: 839496  # 'k'
+savefig.facecolor: 002B36  # 'w'
+patch.facecolor: 268BD2  # 'b'
+patch.edgecolor: 839496  # 'k'
+grid.color: 839496  # 'k'
+figure.edgecolor: 002B36  # 'w'
+figure.facecolor: 073642  # '0.75'
+axes.prop_cycle: cycler('color', ['268BD2', '859900', 'DC322F', '2AA198', 'D33682', 'B58900', '839496'])
+# ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+axes.edgecolor: 839496  # 'k'
+axes.facecolor: 002B36  # 'w'
+axes.labelcolor: 839496  # 'k'
