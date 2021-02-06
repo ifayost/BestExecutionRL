@@ -19,7 +19,7 @@ alpha = 1e-2  # 5e-4
 gamma = 0.999
 epsilon = 0.9
 
-episodes = 50
+episodes = 8000
 batch_size = 64
 target_update = 4
 
@@ -31,10 +31,11 @@ def adaptive(self, episode):
 
 
 agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
-            double=True, save=weights, n_episodes_to_save=10)
+            double=True, save=weights, rewards_mean=100,
+	    n_episodes_to_save=50)
 
 stats = agent.train(env, episodes, batch_size, target_update)
 with open('./figures/DDQN.pkl', 'wb') as f:
     pickle.dump(stats, f)
 
-plot_train_stats(stats, save='./figures/DDQN', rolling=2)
+plot_train_stats(stats, save='./figures/DDQN', rolling=100)
