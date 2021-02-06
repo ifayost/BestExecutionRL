@@ -212,7 +212,7 @@ def plot_train_stats(stats, save=None, rolling=None):
     rewards = np.array(stats['rewards'])
     epsilons = np.array(stats['epsilon'])
     if rolling is None:
-        rolling = int(len(rewards)/100)
+        rolling = int(len(rewards[:, 0])/100)
     smooth = pd.DataFrame(rewards[:, 1]).rolling(rolling).mean()
     plt.rcParams['figure.figsize'] = (20, 10)
     plt.rcParams['font.size'] = 22
