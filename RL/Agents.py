@@ -615,10 +615,10 @@ class DQN:
                     break
 
             if i_episode % self.n_episodes_to_save == 0:
-                stats['epsilon'].append((i_episode, self.epsilon))
-                if self.adaptive is not None:
-                    self.adaptive(self, i_episode)
+                stats['epsilon'].append(self.epsilon)
                 stats['rewards'].append((i_episode, returns.item()))
+            if self.adaptive is not None:
+                self.adaptive(self, i_episode)
             self.returns_deque.append(returns.item())
 
             if i_episode % target_update == 0:

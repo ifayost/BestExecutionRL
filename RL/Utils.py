@@ -212,7 +212,7 @@ def plot_train_stats(stats, save=None, rolling=None):
     rewards = np.array(stats['rewards'])
     epsilons = np.array(stats['epsilon'])
     if rolling is None:
-        rolling = int(len(rewards[:, 0])/100)
+        rolling = int(len(rewards[:, 0])/50)
     smooth = pd.DataFrame(rewards[:, 1]).rolling(rolling).mean()
     plt.rcParams['figure.figsize'] = (20, 10)
     plt.rcParams['font.size'] = 22
@@ -229,8 +229,8 @@ def plot_train_stats(stats, save=None, rolling=None):
     ax2 = ax1.twinx()
     color = "#d33682"
     ax2.set_ylabel('Epsilon', color=color)
-    ax2.plot(epsilons[:, 0], epsilons[:, 1], color=color)
-    ax2.fill_between(epsilons[:, 0], epsilons[:, 1],
+    ax2.plot(rewards[:, 0], epsilons[:, 1], color=color)
+    ax2.fill_between(rewards[:, 0], epsilons[:, 1],
                      interpolate=True, color=color, alpha=0.15)
     ax2.tick_params(axis='y', labelcolor=color)
     if save is not None:
