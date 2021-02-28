@@ -1,25 +1,39 @@
 import matplotlib.pyplot as plt
 import pickle
-from RL.Environment import MarketGym
+import json
+import pandas as pd
+from RL.Environment_v2 import MarketGym, make_variables
 from RL.Rewards import vwap_reward
 from RL.Agents import DQN
 from RL.Utils import plot_train_stats
 
 plt.style.use('./solarized_dark.mplstyle')
 
-PATH = "./episodes"
+PATH = "/Users/ifayost/Desktop/TFM/Projects/DATA/SAN_month/"\
+    "best_exec_data/orderbook"
 
-env = MarketGym(PATH, vwap_reward)
+timestamp = str(
+    pd.Timestamp.now()
+    ).replace(' ', '_').replace(':', '-').split('.')
+
+H = pd.to_timedelta(1, unit='hour')
+V = 500_000
+buy = True
+time_step = pd.to_timedelta(1, unit='s')
+make_variables = make_variables
+
+env = MarketGym(PATH, H, V, buy, time_step, make_variables, vwap_reward)
 
 state = env.reset()
 
-weights = "./weights/DDQN.pt"
+weights = f'./weights/DDQN_{timestamp}.pt'
 
 alpha = 1e-2  # 5e-4
 gamma = 0.999
 epsilon = 0.9
+double = True
 
-episodes = 8000
+episodes = 10
 batch_size = 64
 target_update = 4
 
@@ -31,11 +45,22 @@ def adaptive(self, episode):
 
 
 agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
-            double=True, save=weights, rewards_mean=100,
-	    n_episodes_to_save=50)
+            double=double, save=weights, rewards_mean=100,
+            n_episodes_to_save=50)
+
+info = {'horizon': str(env.H), 'volume': str(env.V),
+        'buy': str(env.buy), 'time_step': str(env.time_step),
+        'reward_function': 'vwap_reward',
+        'algo': {'name': 'DDQN', 'alpha': alpha, 'gamma': gamma,
+                 'epsilon_ini': epsilon, 'discoung': discount,
+                 'double': double},
+        'training': {'episodes': episodes, 'batch_size': batch_size,
+                     'target_update': target_update}}
+with open(f'./weights/DDQN_{timestamp}.txt', 'w') as f:
+    f.write(json.dumps(info))
 
 stats = agent.train(env, episodes, batch_size, target_update)
-with open('./figures/DDQN.pkl', 'wb') as f:
+with open(f'./figures/DDQN_{timestamp}.pkl', 'wb') as f:
     pickle.dump(stats, f)
 
-plot_train_stats(stats, save='./figures/DDQN', rolling=100)
+plot_train_stats(stats, save=f'./figures/DDQN_{timestamp}', rolling=100)
