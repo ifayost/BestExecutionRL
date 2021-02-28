@@ -229,8 +229,8 @@ def plot_train_stats(stats, save=None, rolling=None):
     ax2 = ax1.twinx()
     color = "#d33682"
     ax2.set_ylabel('Epsilon', color=color)
-    ax2.plot(rewards[:, 0], epsilons[:, 1], color=color)
-    ax2.fill_between(rewards[:, 0], epsilons[:, 1],
+    ax2.plot(rewards[:, 0], epsilons, color=color)
+    ax2.fill_between(rewards[:, 0], epsilons,
                      interpolate=True, color=color, alpha=0.15)
     ax2.tick_params(axis='y', labelcolor=color)
     if save is not None:
