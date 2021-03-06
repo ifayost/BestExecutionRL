@@ -1,6 +1,7 @@
 # import torch
 import matplotlib.pyplot as plt
 import torch
+import os
 from RL.Environment import MarketGym, free_step
 from RL.Agents import TWAP, POV, DQN
 from RL.Rewards import vwap_reward
@@ -10,6 +11,7 @@ plt.style.use("./solarized_dark.mplstyle")
 
 EPISODES = "./episodes"
 TEST = "./test"
+n_episodes = len(os.listdir(EPISODES+"/test"))
 
 env = MarketGym(EPISODES, vwap_reward, mode='test')
 
