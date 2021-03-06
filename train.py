@@ -32,7 +32,7 @@ def adaptive(self, episode):
 
 agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
             double=True, save=weights, rewards_mean=100,
-	    n_episodes_to_save=50)
+            n_episodes_to_save=50)
 
 stats = agent.train(env, episodes, batch_size, target_update)
 with open('./figures/DDQN.pkl', 'wb') as f:
