@@ -23,7 +23,7 @@ weights_dqn = "./weights/DDQN.pt"
 dqn = DQN(env, alpha, gamma, epsilon,
           double=True)
 dqn.Q_net.load_state_dict(torch.load(weights_dqn))
-dqn_test = test_agent(env, dqn, n_episodes=10,
+dqn_test = test_agent(env, dqn, n_episodes=n_episodes,
                       save=TEST+"/DDQN")
 
 
@@ -31,9 +31,9 @@ env.step = free_step(env)
 
 twap = TWAP()
 twap.train(env)
-test = test_agent(env, twap, n_episodes=10,
+test = test_agent(env, twap, n_episodes=n_episodes,
                   save=TEST+"/twap")
 
 pov = POV(0.1)
-test = test_agent(env, pov, n_episodes=10, episode_retrain=True,
+test = test_agent(env, pov, n_episodes=n_episodes, episode_retrain=True,
                   save=TEST+"/pov")
