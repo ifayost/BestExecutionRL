@@ -6,7 +6,7 @@ from RL.Agents import TWAP, POV, DQN
 from RL.Rewards import vwap_reward
 from RL.Utils import test_agent
 
-plt.style.use("solarized_dark")
+plt.style.use("./solarized_dark.mplstyle")
 
 EPISODES = "./episodes"
 TEST = "./test"
