@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-import pickle
+import pickle5
 import json
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -122,15 +122,15 @@ def test_agent(env, agent, n_episodes, save=None,
 
     if save is not None:
         with open(save + '.pickle', 'wb') as file:
-            pickle.dump([rewards, actions, remaining_inventory, prices],
-                        file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle5.dump([rewards, actions, remaining_inventory, prices],
+                         file, protocol=pickle5.HIGHEST_PROTOCOL)
 
     return rewards, actions, remaining_inventory, prices
 
 
 def open_test(path):
     with open(path, 'rb') as file:
-        rewards, actions, remaining_inventory, cost = pickle.load(file)
+        rewards, actions, remaining_inventory, cost = pickle5.load(file)
     return rewards, actions, remaining_inventory, cost
 
 
@@ -140,7 +140,7 @@ def round_value_error(x, e):
     return x, e
 
 
-def plot_test(env, test_path, episodes):
+def plot_test(test_path, episodes):
     rewards, actions, remaining_inventory, _ = \
         open_test(test_path)
     cumulative_rewards = [sum(i) for i in rewards.values()]

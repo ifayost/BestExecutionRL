@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import pickle
+import pandas as pd
+import json
 from RL.Environment import MarketGym
-from RL.Rewards import vwap_reward
+from RL.Rewards import vwap_reward_penalty
 from RL.Agents import DQN
 from RL.Utils import plot_train_stats
 
@@ -9,11 +11,16 @@ plt.style.use('./solarized_dark.mplstyle')
 
 PATH = "./episodes"
 
-env = MarketGym(PATH, vwap_reward)
+timestamp = str(
+    pd.Timestamp.now()
+    ).replace(' ', '_').replace(':', '-').split('.')
+
+env = MarketGym(PATH, vwap_reward_penalty)
 
 state = env.reset()
 
-weights = "./weights/DDQN.pt"
+model_name = 'DDQN'
+weights = f'./weights/{model_name}_{timestamp}.pt'
 
 alpha = 1e-2  # 5e-4
 gamma = 0.999
@@ -24,18 +31,30 @@ batch_size = 64
 target_update = 4
 
 discount = 1-1/(episodes*0.15)
+epsilon_min = 0.05
 
 
 def adaptive(self, episode):
-    self.epsilon = max(0.01, min(1.0, self.epsilon*discount))
+    self.epsilon = max(epsilon_min, min(1.0, self.epsilon*discount))
 
 
 agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
             double=True, save=weights, rewards_mean=100,
             n_episodes_to_save=50)
 
+info = {'horizon': str(env.H), 'volume': str(env.V),
+        'buy': str(env.buy), 'time_step': str(env.time_step),
+        'reward_function': 'vwap_reward_penalty',
+        'algo': {'name': model_name, 'alpha': alpha, 'gamma': gamma,
+                 'epsilon_ini': epsilon, 'epsilon_min': epsilon_min,
+                 'discount': discount, 'double': True},
+        'training': {'episodes': episodes, 'batch_size': batch_size,
+                     'target_update': target_update}}
+with open(f'./weights/info_{model_name}_{timestamp}.txt', 'w') as f:
+    f.write(json.dumps(info))
+
 stats = agent.train(env, episodes, batch_size, target_update)
-with open('./figures/DDQN.pkl', 'wb') as f:
+with open(f'./figures/{model_name}_{timestamp}.pkl', 'wb') as f:
     pickle.dump(stats, f)
 
-plot_train_stats(stats, save='./figures/DDQN', rolling=100)
+plot_train_stats(stats, save='./figures/DDQN', rolling=50)
