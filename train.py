@@ -15,7 +15,8 @@ timestamp = str(
     pd.Timestamp.now()
     ).replace(' ', '_').replace(':', '-').split('.')
 
-env = MarketGym(PATH, vwap_reward_penalty)
+reward_penalty = 10_000
+env = MarketGym(PATH, vwap_reward_penalty(reward_penalty))
 
 state = env.reset()
 
@@ -45,6 +46,7 @@ agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
 info = {'horizon': str(env.H), 'volume': str(env.V),
         'buy': str(env.buy), 'time_step': str(env.time_step),
         'reward_function': 'vwap_reward_penalty',
+        'reward_penalty': reward_penalty,
         'algo': {'name': model_name, 'alpha': alpha, 'gamma': gamma,
                  'epsilon_ini': epsilon, 'epsilon_min': epsilon_min,
                  'discount': discount, 'double': True},

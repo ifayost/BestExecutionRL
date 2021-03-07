@@ -14,6 +14,6 @@ def vwap_reward_penalty(penalty):
         mean = env.price_mean * action
         reward = mean - price
         if env.t <= pd.to_timedelta(0, unit='s'):
-            reward = -10000 * abs(reward)
+            reward = -penalty * abs(reward)
         return reward
     return reward_function
