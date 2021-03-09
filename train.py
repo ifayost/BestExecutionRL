@@ -13,7 +13,7 @@ PATH = "./episodes"
 
 timestamp = str(
     pd.Timestamp.now()
-    ).replace(' ', '_').replace(':', '-').split('.')
+    ).replace(' ', '_').replace(':', '-').split('.')[0]
 
 reward_penalty = 10_000
 env = MarketGym(PATH, vwap_reward_penalty(reward_penalty))
@@ -25,21 +25,21 @@ weights = f'./weights/{model_name}_{timestamp}.pt'
 
 alpha = 1e-2  # 5e-4
 gamma = 0.999
-epsilon = 0.9
+epsilon = 0.05
 
 episodes = 8000
 batch_size = 64
 target_update = 4
 
-discount = 1-1/(episodes*0.15)
-epsilon_min = 0.05
+# discount = 1-1/(episodes*0.15)
+# epsilon_min = 0.05
 
 
-def adaptive(self, episode):
-    self.epsilon = max(epsilon_min, min(1.0, self.epsilon*discount))
+# def adaptive(self, episode):
+#     self.epsilon = max(epsilon_min, min(1.0, self.epsilon*discount))
 
 
-agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
+agent = DQN(env, alpha, gamma, epsilon,  # adaptive=adaptive,
             double=True, save=weights, rewards_mean=100,
             n_episodes_to_save=50)
 
@@ -48,8 +48,9 @@ info = {'horizon': str(env.H), 'volume': str(env.V),
         'reward_function': 'vwap_reward_penalty',
         'reward_penalty': reward_penalty,
         'algo': {'name': model_name, 'alpha': alpha, 'gamma': gamma,
-                 'epsilon_ini': epsilon, 'epsilon_min': epsilon_min,
-                 'discount': discount, 'double': True},
+                 'epsilon_ini': epsilon,  # 'epsilon_min': epsilon_min,
+                 # 'discount': discount,
+                 'double': True},
         'training': {'episodes': episodes, 'batch_size': batch_size,
                      'target_update': target_update}}
 with open(f'./weights/info_{model_name}_{timestamp}.txt', 'w') as f:
@@ -59,4 +60,4 @@ stats = agent.train(env, episodes, batch_size, target_update)
 with open(f'./figures/{model_name}_{timestamp}.pkl', 'wb') as f:
     pickle.dump(stats, f)
 
-plot_train_stats(stats, save='./figures/DDQN', rolling=50)
+plot_train_stats(stats, save=f'./figures/{model_name}_{timestamp}', rolling=50)
