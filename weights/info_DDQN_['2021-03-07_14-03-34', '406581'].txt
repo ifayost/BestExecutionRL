@@ -1,0 +1,1 @@
+{"horizon": "0 days 01:00:00", "volume": "500000", "buy": "True", "time_step": "0 days 00:00:01", "reward_function": "vwap_reward_penalty", "algo": {"name": "DDQN", "alpha": 0.01, "gamma": 0.999, "epsilon_ini": 0.9, "epsilon_min": 0.05, "discount": 0.9991666666666666, "double": true}, "training": {"episodes": 8000, "batch_size": 64, "target_update": 4}}
