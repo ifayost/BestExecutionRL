@@ -17,14 +17,14 @@ env = MarketGym(EPISODES, vwap_reward, mode='test')
 
 alpha = 5e-4
 gamma = 0.999
-epsilon = 0.1
+epsilon = 1
 
-weights_dqn = "./weights/DDQN.pt"
+weights_dqn = "./weights/DDQN_2021-03-11_08-40-58.pt"
 dqn = DQN(env, alpha, gamma, epsilon,
           double=True)
 dqn.Q_net.load_state_dict(torch.load(weights_dqn))
 dqn_test = test_agent(env, dqn, n_episodes=n_episodes,
-                      save=TEST+"/DDQN")
+                      save=TEST+"/DDQN_2021-03-11_08-40-58")
 
 
 env.step = free_step(env)
