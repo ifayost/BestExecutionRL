@@ -15,7 +15,7 @@ timestamp = str(
     pd.Timestamp.now()
     ).replace(' ', '_').replace(':', '-').split('.')[0]
 
-reward_penalty = 10_000
+reward_penalty = 100_000
 env = MarketGym(PATH, vwap_reward_penalty(reward_penalty))
 
 state = env.reset()
@@ -27,7 +27,7 @@ alpha = 1e-2  # 5e-4
 gamma = 0.999
 epsilon = 0.05
 
-episodes = 8000
+episodes = 10000
 batch_size = 64
 target_update = 4
 
