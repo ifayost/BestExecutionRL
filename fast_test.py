@@ -1,11 +1,8 @@
-# import torch
-import matplotlib.pyplot as plt
 from RL.Environment import MarketGym, free_step
 from RL.Agents import TWAP, POV, DQN
 from RL.Rewards import vwap_reward
 from RL.Utils import test_episode_agent
 
-plt.style.use("solarized_dark")
 
 PATH = "./episodes"
 env = MarketGym(PATH, vwap_reward)

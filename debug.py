@@ -4,9 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-plt.style.use("solarized_dark")
-
-
 PATH = "/Users/ifayost/Desktop/TFM/Projects/simplification/episodes"
 
 env = MarketGym(PATH, vwap_reward, mode='train')

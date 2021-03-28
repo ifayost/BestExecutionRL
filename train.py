@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import pickle
 import pandas as pd
 import json
@@ -7,7 +6,6 @@ from RL.Rewards import vwap_reward_penalty
 from RL.Agents import DQN
 from RL.Utils import plot_train_stats
 
-plt.style.use('./solarized_dark.mplstyle')
 
 PATH = "./episodes"
 
