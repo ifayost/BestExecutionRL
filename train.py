@@ -1,3 +1,4 @@
+import torch
 import pickle
 import pandas as pd
 import json
@@ -18,8 +19,9 @@ env = MarketGym(PATH, vwap_reward_penalty(reward_penalty))
 
 state = env.reset()
 
-model_name = 'DDQN'
+model_name = 'DDQN+pretrain'
 weights = f'./weights/{model_name}_{timestamp}.pt'
+pretrain_w = './weights/DDQN_pretrained_2021-03-28_14-58-48.pt'
 
 alpha = 1e-2  # 5e-4
 gamma = 0.999
@@ -40,6 +42,9 @@ target_update = 4
 agent = DQN(env, alpha, gamma, epsilon,  # adaptive=adaptive,
             double=True, save=weights, rewards_mean=100,
             n_episodes_to_save=50)
+
+agent.Q_net.load_state_dict(torch.load(pretrain_w))
+agent.target_net.load_state_dict(torch.load(pretrain_w))
 
 info = {'horizon': str(env.H), 'volume': str(env.V),
         'buy': str(env.buy), 'time_step': str(env.time_step),

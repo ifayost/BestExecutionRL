@@ -83,8 +83,7 @@ class MarketGym(gym.Env):
             (istep + 1)
 
         state = [self.t.delta/self.H.delta, self.i/self.V]
-        state = state + [0  # self.orderbook[col][istep]
-                         for col in self.variables]
+        state = state + [self.orderbook[col][istep] for col in self.variables]
         state = np.array(state, dtype='float32')
         return state
 

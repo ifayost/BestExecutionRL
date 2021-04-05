@@ -636,7 +636,7 @@ class DQN:
                         print("Saved state at episode:", i_episode,
                               "with mean returns:", f'{mean_returns:,}')
                         stats['checkpoints'].append(
-                            (i_episode, returns.item())
+                            (i_episode, mean_returns)
                             )
         return stats
 
