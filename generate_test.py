@@ -6,7 +6,7 @@ from RL.Rewards import vwap_reward
 from RL.Utils import test_agent
 
 
-name = "DDQN_2021-03-14_12-38-30.pt"
+name = "DDQN_pretrained_2021-03-28_14-58-48.pt"
 time = name[-22:-3]
 
 EPISODES = "./episodes"
