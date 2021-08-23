@@ -186,6 +186,33 @@ class EpisodeGenerator:
                                 protocol=pickle.HIGHEST_PROTOCOL)
 
 
+def free_step(env):
+
+    def step(action):
+        env.history.append(action)
+
+        env.t -= env.time_step
+
+        # Comprobamos que no se ha terminado el tiempo o el inventario.
+        # Si se ha terminado el tiemo vendemos/compramos todo lo que queda.
+        if env.t <= pd.to_timedelta(0, unit='s') or action >= env.i:
+            action = env.i
+            env.i = 0
+            env.done = True
+        else:
+            env.i -= action
+
+        reward = env.compute_reward(env, action, env.step, env.done)
+
+        env.istep += 1
+        env.state = env.make_state(env.istep)
+
+        info = {}
+
+        return env.state, reward, env.done, info
+    return step
+
+
 def make_variables(env, df, windows=[4, 6, 18, 30], clip_min=-5, clip_max=5):
     orderbook = df.copy()
     windows = sorted(windows)
@@ -312,28 +339,72 @@ def make_variables(env, df, windows=[4, 6, 18, 30], clip_min=-5, clip_max=5):
     return orderbook
 
 
-def free_step(env):
+def make_variables_simple(env, df, windows=[4, 10, 30], clip_min=-5,
+                          clip_max=5):
+    orderbook = df.copy()
+    windows = sorted(windows)
+    expected_steps = env.H.delta / env.time_step.delta
+    windows = [int(expected_steps/w) for w in windows]
 
-    def step(action):
-        env.history.append(action)
+    pc = 'PRE_VENTA1' if env.buy else 'PRE_COMPRA1'
+    vc = 'VORDEN_PRVENTA1' if env.buy else 'VORDEN_PRCOMPRA1'
+    prices = pd.Series(orderbook[pc])
+    volume = pd.Series(orderbook[vc])
 
-        env.t -= env.time_step
+    def standarize(x, windows, clip_min, clip_max):
+        x = pd.Series(x.copy())
+        avg_ = np.nan_to_num(
+            x.rolling(windows[0], min_periods=0).mean(), nan=0)
+        std_ = np.nan_to_num(
+            x.rolling(windows[0], min_periods=0).std(), nan=1)
+        standarized = np.clip(
+            np.nan_to_num((x - avg_)/std_, 0), clip_min, clip_max)
+        return standarized
 
-        # Comprobamos que no se ha terminado el tiempo o el inventario.
-        # Si se ha terminado el tiemo vendemos/compramos todo lo que queda.
-        if env.t <= pd.to_timedelta(0, unit='s') or action >= env.i:
-            action = env.i
-            env.i = 0
-            env.done = True
-        else:
-            env.i -= action
+    # Base avg and std prices
+    avg = \
+        np.nan_to_num(prices.rolling(windows[0], min_periods=0).mean(), nan=0)
+    std = \
+        np.nan_to_num(prices.rolling(windows[0], min_periods=0).std(), nan=1)
+    orderbook['price'] = np.clip((prices - avg)/std, clip_min, clip_max)
+    orderbook[f'{windows[0]}ma'] = avg
+    orderbook[f'{windows[0]}std'] = std
 
-        reward = env.compute_reward(env, action, env.step, env.done)
+    # Price MAs
+    for w in windows[1:]:
+        orderbook[f'{w}ma'] = np.nan_to_num(
+            (prices.rolling(w).mean() - avg) / std, 0)
 
-        env.istep += 1
-        env.state = env.make_state(env.istep)
+    # RSIs
+    def make_rsi(prices, w_period):
+        dif = prices.diff(1)
+        up = dif.copy()
+        down = dif.copy()
+        up[up < 0] = 0
+        down[down > 0] = 0
+        up = up.rolling(w_period).mean()
+        down = abs(down.rolling(w_period).mean())
+        rsi = 1 - 1 / (1 + (up/down))
+        return rsi.values
 
-        info = {}
+    rsi = make_rsi(prices, windows[1])
+    orderbook[f'{windows[1]}rsi'] = np.nan_to_num(rsi - 0.5)
 
-        return env.state, reward, env.done, info
-    return step
+    # MFIs
+    pricexvolume = prices * volume
+    mfi = make_rsi(pricexvolume, windows[1])
+    orderbook[f'{windows[1]}mfi'] = \
+        standarize(mfi, windows, clip_min, clip_max)
+
+    # Price/Volume
+    orderbook['p/v'] = \
+        standarize(np.log(prices/volume), windows, clip_min, clip_max)
+
+    # Spread
+    orderbook['spread'] = \
+        pd.Series(orderbook['PRE_VENTA1']) - \
+        pd.Series(orderbook['PRE_COMPRA1'])
+    orderbook['spread'] = \
+        standarize(orderbook['spread'], windows, clip_min, clip_max)
+
+    return orderbook
