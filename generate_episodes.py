@@ -3,7 +3,7 @@ from RL.Utils import read_df
 import pandas as pd
 
 
-PATH = "../DATA/SAN_month/best_exec_data/orderbook/"
+PATH = "../DATA/"
 SAVE = "./episodes/simple"
 
 train, test = read_df(PATH, test=5)

@@ -10,7 +10,8 @@ from tqdm import tqdm
 
 def read_df(path, test=None):
     files = [i for i in os.listdir(path)]
-    files.remove('.DS_Store')
+    if '.DS_Store' in files:
+        files.remove('.DS_Store')
     dfs = {int(i.split('_')[-1][:-4]): pd.read_csv(os.path.join(path, i))
            for i in files}
     n_orders = {i: len(j) for i, j in dfs.items()}
