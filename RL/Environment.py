@@ -29,15 +29,12 @@ class MarketGym(gym.Env):
                 'VORDEN_PRVENTA1' if self.buy else 'VORDEN_PRCOMPRA1'
             self.volMeanCol = \
                 'VORDEN_PRCOMPRA1' if self.buy else 'VORDEN_PRVENTA1'
-            self.cols = info['cols']
             self.time_step = pd.to_timedelta(info['time_step'])
+            self.keys = info['variables']
             self.episodes = []
             for i in os.listdir(os.path.join(path, mode)):
                 if i[-7:] == '.pickle':
                     self.episodes.append(i)
-            with open(os.path.join(self.path, mode, self.episodes[0]),
-                      'rb') as file:
-                self.keys = list(pickle.load(file).keys())
             self.expected_steps = self.H.delta / self.time_step.delta
             self.history = []
         except FileNotFoundError:
@@ -61,6 +58,7 @@ class MarketGym(gym.Env):
         ignore = ['time', 'VORDEN_PRCOMPRA1', 'PRE_COMPRA1', 'PRE_VENTA1',
                   'VORDEN_PRVENTA1', 'FECHA', 'vol_acc']
         self.variables = [k for k in self.keys if k not in ignore]
+        self.variables = [self.variables[0]] + self.variables[3:]
         self.observation_space = \
             spaces.Box(low=np.array([0, 0] + [-5] * len(self.variables)),
                        high=np.array([1, 1] + [5] * len(self.variables)),
@@ -146,13 +144,6 @@ class EpisodeGenerator:
         if not os.path.exists(os.path.join(path, 'test')):
             os.makedirs(os.path.join(path, 'test'))
 
-        info = {'horizon': str(self.H), 'volume': str(self.V),
-                'buy': str(self.buy), 'time_step': str(self.time_step),
-                'n_episodes': str(n_episodes), 'cols': self.cols}
-
-        with open(os.path.join(path, 'info.txt'), 'w') as file:
-            json.dump(info, file)
-
         for test_bool, df in enumerate([train, test]):
             # Posiciones del orderbook que permiten completar
             # el tiempo entero del horizonte.
@@ -184,6 +175,13 @@ class EpisodeGenerator:
                                        str(pos)) + '.pickle', 'wb') as file:
                     pickle.dump(episode, file,
                                 protocol=pickle.HIGHEST_PROTOCOL)
+
+        info = {'horizon': str(self.H), 'volume': str(self.V),
+                'buy': str(self.buy), 'time_step': str(self.time_step),
+                'variables': list(episode.keys())}
+
+        with open(os.path.join(path, 'info.txt'), 'w') as file:
+            json.dump(info, file)
 
 
 def free_step(env):
