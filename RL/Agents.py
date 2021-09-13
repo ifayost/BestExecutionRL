@@ -482,23 +482,14 @@ class DQN:
     class DQNetwork(nn.Module):
         def __init__(self, state_dims, n_actions):
             super().__init__()
-            self.fc1 = nn.Linear(state_dims, 64)
-
-            self.fc_value = nn.Linear(64, 256)
-            self.fc_adv = nn.Linear(64, 256)
-
-            self.value = nn.Linear(256, 1)
-            self.adv = nn.Linear(256, n_actions)
+            self.fc1 = nn.Linear(state_dims, 256)
+            self.fc2 = nn.Linear(256, 256)
+            self.fc3 = nn.Linear(256, n_actions)
 
         def forward(self, x):
             x = F.relu(self.fc1(x))
-
-            value = F.relu(self.fc_value(x))
-            adv = F.relu(self.fc_adv(x))
-            value = self.value(value)
-            adv = self.adv(adv)
-
-            Q = value + adv - torch.mean(adv, dim=1, keepdim=True)
+            x = F.relu(self.fc2(x))
+            Q = self.fc3(x)
             return Q
 
     class ReplayMemory:
