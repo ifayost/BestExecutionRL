@@ -21,23 +21,23 @@ state = env.reset()
 model_name = 'DDQN'
 weights = f'./weights/{model_name}_{timestamp}.pt'
 
-alpha = 1e-2  # 5e-4
-gamma = 0.999
-epsilon = 0.05
+alpha = 5e-4
+gamma = 0.99
+epsilon = 1
 
 episodes = 10000
 batch_size = 64
 target_update = 4
 
-# discount = 1-1/(episodes*0.15)
-# epsilon_min = 0.05
+discount = 1-1/(episodes*0.2)
+epsilon_min = 0.05
 
 
-# def adaptive(self, episode):
-#     self.epsilon = max(epsilon_min, min(1.0, self.epsilon*discount))
+def adaptive(self, episode):
+    self.epsilon = max(epsilon_min, min(1.0, self.epsilon*discount))
 
 
-agent = DQN(env, alpha, gamma, epsilon,  # adaptive=adaptive,
+agent = DQN(env, alpha, gamma, epsilon, adaptive=adaptive,
             double=True, save=weights, rewards_mean=100,
             n_episodes_to_save=50)
 
@@ -48,8 +48,8 @@ info = {'horizon': str(env.H), 'volume': str(env.V),
         'reward_function': 'vwap_reward_penalty',
         'reward_penalty': reward_penalty,
         'algo': {'name': model_name, 'alpha': alpha, 'gamma': gamma,
-                 'epsilon_ini': epsilon,  # 'epsilon_min': epsilon_min,
-                 # 'discount': discount,
+                 'epsilon_ini': epsilon, 'epsilon_min': epsilon_min,
+                 'discount': discount,
                  'double': True},
         'training': {'episodes': episodes, 'batch_size': batch_size,
                      'target_update': target_update}}

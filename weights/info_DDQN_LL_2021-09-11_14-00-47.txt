@@ -1,0 +1,1 @@
+{"algo": {"name": "DDQN_LL", "alpha": 0.01, "gamma": 0.999, "epsilon_ini": 0.05, "double": true}, "training": {"episodes": 1000, "batch_size": 64, "target_update": 4}}
